@@ -22,7 +22,7 @@ function dosPeliculasRandom(req, res) {
     con.query(sql, function(error, resultado, fields) {
         if (error) {
             console.log("Hubo un error en la consulta", error.message);
-            return res.status(404).send("Hubo un error en la consulta");
+            return res.status(500).send("Hubo un error en la consulta");
         }
 
         if (resultado.length === 0) {
@@ -70,7 +70,7 @@ function dosPeliculasRandom(req, res) {
         con.query(sql, function(error, resultado, fields) {
             if (error) {
                 console.log("Hubo un error en la consulta", error.message);
-                return res.status(404).send("Hubo un error en la consulta");
+                return res.status(500).send("Hubo un error en la consulta");
             }
 
             var response = {
@@ -147,6 +147,12 @@ function insertarVoto(req, res) {
         var actorCompetencia = req.body.actor === '0' ? null : req.body.actor;
         console.log(req.body);
         
+        
+        if (nombreCompetencia < 1 ) {
+        return res.status(422).send("El nombre no puede estar vacío");
+        }
+        
+
         //query que inserta a la tabla competencia una nueva fila
         var queryNueva = "INSERT INTO competencia (nombre, genero_id, director_id, actor_id) VALUES ('" + nombreCompetencia + "', " + generoCompetencia + ", " + directorCompetencia + ", " + actorCompetencia + ");";
         console.log(queryNueva);
@@ -156,6 +162,7 @@ function insertarVoto(req, res) {
                 console.log("Hubo un error al crear la competencia", error.message);
                 return res.status(500).send("Hubo un error al crear la competencia");
             }
+
             res.send(JSON.stringify(resultado));
         }); 
     }
