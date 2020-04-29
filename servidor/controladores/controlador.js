@@ -140,32 +140,54 @@ function insertarVoto(req, res) {
 
      // función para crear nueva competencia   
     function nuevaCompetencia(req, res) {
-        //guardamos en variables el nombre de la competencia y los filtros de actor, director y genero
-        var nombreCompetencia = req.body.nombre; 
-        var generoCompetencia = req.body.genero === '0' ? null : req.body.genero;
-        var directorCompetencia = req.body.director === '0' ? null : req.body.director;
-        var actorCompetencia = req.body.actor === '0' ? null : req.body.actor;
-        console.log(req.body);
-        
-        
-        if (nombreCompetencia < 1 ) {
-        return res.status(422).send("El nombre no puede estar vacío");
-        }
-        
-
-        //query que inserta a la tabla competencia una nueva fila
-        var queryNueva = "INSERT INTO competencia (nombre, genero_id, director_id, actor_id) VALUES ('" + nombreCompetencia + "', " + generoCompetencia + ", " + directorCompetencia + ", " + actorCompetencia + ");";
-        console.log(queryNueva);
-        
-        con.query(queryNueva, function(error, resultado, fields) {
-            if (error) {
-                console.log("Hubo un error al crear la competencia", error.message);
-                return res.status(500).send("Hubo un error al crear la competencia");
+    //guardamos en variables el nombre de la competencia y los filtros de actor, director y genero
+    var request = req.body;
+    var genero = request.genero === '0' ? null : request.genero;
+    var director = request.director === '0' ? null : request.director;
+    var actor = request.actor === '0' ? null : request.actor;
+    var nuevaCompetencia = request.nombre;
+    
+    
+    //chequeo que el nombre no esté vacío ni sea igual a una competencia existente
+    con.query('SELECT nombre FROM competencia', function(error,resultadoCompetencia,fields){
+        for(var i=0;i<resultadoCompetencia.length;i++){
+            if(nuevaCompetencia === resultadoCompetencia[i].nombre){
+                return res.status(422).send('Ya existe una competencia con ese nombre ')
             }
+            if (nuevaCompetencia < 1 ) {
+                return res.status(422).send("El nombre no puede estar vacío");
+                }
+        }
+      
+    //hacemos una query para ir ingresando los distintos campos y comprobar si hay + de 2 peliculas en la competencia   
+    var queryPeliculas = "SELECT DISTINCT pelicula.id, poster, titulo, genero_id FROM pelicula LEFT JOIN actor_pelicula ON pelicula.id = actor_pelicula.pelicula_id LEFT JOIN director_pelicula ON pelicula.id = director_pelicula.pelicula_id WHERE 1 = 1";
+    var queryGenero = genero ? ' AND pelicula.genero_id = '  + genero : '';
+    var queryActor = actor ? ' AND actor_pelicula.actor_id = ' + actor : '';
+    var queryDirector = director ? ' AND director_pelicula.director_id = ' + director : '';
+    var sqlQuery = queryPeliculas + queryGenero + queryActor + queryDirector;
+    console.log(sqlQuery);
+    con.query(sqlQuery,function(error,resultadoQuery,fields){
+        if(director != null || actor != null){
+            
+        if(resultadoQuery.length < 2){
+            console.log('No hay suficientes peliculas para armar esta competencia');
+            return res.status(422).send('No hay suficinetes peliculas para armar esta competencia');
+            }
+        }
 
-            res.send(JSON.stringify(resultado));
-        }); 
-    }
+    //query para insertar la nueva competencia a la base de datos
+    con.query('INSERT INTO competencia (nombre,genero_id,director_id,actor_id) VALUES (?,?,?,?)',[nuevaCompetencia,genero,director,actor],function(error,results,fields){
+                
+        if(error){
+            console.log('Hubo un error en la consulta', error.message);
+            return res.status(404).send('hubo un error en la consulta');
+        }
+        if(error) return res.status(500).json(error);
+            res.send(JSON.stringify(results));
+        })
+    })
+})
+}
 
     //funcion para eliminar votos 
     function eliminarVotos(req, res) {
@@ -183,6 +205,26 @@ function insertarVoto(req, res) {
         });
     }
 
+    function nombreCompetencia(req, res){
+        var nombreCompetencia = req.params.id;
+        var query = "SELECT competencia.id, competencia.nombre, genero.nombre genero, director.nombre director, actor.nombre actor FROM competencia LEFT JOIN genero ON genero_id = genero.id LEFT JOIN director ON director_id= director.id LEFT JOIN actor ON actor_id= actor.id WHERE competencia.id = " + nombreCompetencia;  
+    
+            connection.query(query, function(error, resultado){
+                if (error) {
+                    return res.status(500).json(error);
+                }
+    
+                var response = {
+                    'id': resultado,
+                    'nombre': resultado[0].nombre,
+                    'genero_nombre': resultado[0].genero,
+                    'actor_nombre': resultado[0].actor,
+                    'director_nombre': resultado[0].director
+                }
+            res.send(JSON.stringify(response));    
+        });
+    }
+    
     //cargamos la lista de generos
     function cargarGeneros(req,res) {
         var pedido = "SELECT * FROM genero"
@@ -268,6 +310,7 @@ module.exports = {
     obtenerResultados: obtenerResultados,
     nuevaCompetencia: nuevaCompetencia,
     eliminarVotos: eliminarVotos,
+    nombreCompetencia: nombreCompetencia,
     cargarGeneros: cargarGeneros,
     cargarDirectores: cargarDirectores,
     cargarActores: cargarActores,

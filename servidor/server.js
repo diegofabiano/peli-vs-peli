@@ -18,10 +18,11 @@ app.get('/directores', controlador.cargarDirectores);
 app.get('/actores', controlador.cargarActores);
 
 app.get('/competencias',controlador.buscarCompetencias);
-app.post('/competencias/:idCompetencia/voto', controlador.insertarVoto);
+app.get('/competencias/:id', controlador.nombreCompetencia)
 app.get('/competencias/:id/peliculas', controlador.dosPeliculasRandom);
 app.get('/competencias/:id/resultados', controlador.obtenerResultados);
 
+app.post('/competencias/:idCompetencia/voto', controlador.insertarVoto);
 app.post('/competencias', controlador.nuevaCompetencia);
 app.put('/competencias/:id', controlador.editarCompetencia);
 
